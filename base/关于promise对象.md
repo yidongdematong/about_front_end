@@ -66,3 +66,57 @@ console.log('Hi!');
 ```
 
 上面代码中，Promise 新建后立即执行，所以首先输出的是 Promise。然后，then 方法指定的回调函数，将在当前脚本所有同步任务执行完才会执行，所以 resolved 最后输出。
+
+## Promise.all()
+
+Promise.all()方法用于将多个 Promise 实例，包装成一个新的 Promise 实例。
+
+```
+const p = Promise.all([p1, p2, p3]);
+```
+
+上面代码中，Promise.all()方法接受一个数组作为参数，p1、p2、p3 都是 Promise 实例，如果不是，就会先调用下面讲到的 Promise.resolve 方法，将参数转为 Promise 实例，再进一步处理。另外，Promise.all()方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 Promise 实例。
+
+p 的状态由 p1、p2、p3 决定，分成两种情况。
+
+- 只有 p1、p2、p3 的状态都变成 fulfilled，p 的状态才会变成 fulfilled，此时 p1、p2、p3 的返回值组成一个数组，传递给 p 的回调函数。
+- 只要 p1、p2、p3 之中有一个被 rejected，p 的状态就变成 rejected，此时第一个被 reject 的实例的返回值，会传递给 p 的回调函数。
+
+具体例子：
+
+```
+// 生成一个Promise对象的数组
+const promises = [2, 3, 5, 7, 11, 13].map(function (id) {
+  return getJSON('/post/' + id + ".json");
+});
+
+Promise.all(promises).then(function (posts) {
+  // ...
+}).catch(function(reason){
+  // ...
+});
+```
+
+上面代码中，promises 是包含 6 个 Promise 实例的数组，只有这 6 个实例的状态都变成 fulfilled，或者其中有一个变为 rejected，才会调用 Promise.all 方法后面的回调函数。
+
+另一个例子。
+
+```
+const databasePromise = connectDatabase();
+
+const booksPromise = databasePromise
+  .then(findAllBooks);
+
+const userPromise = databasePromise
+  .then(getCurrentUser);
+
+Promise.all([
+  booksPromise,
+  userPromise
+])
+.then(([books, user]) => pickTopRecommendations(books, user));
+```
+
+上面代码中，booksPromise 和 userPromise 是两个异步操作，只有等到它们的结果都返回了，才会触发 pickTopRecommendations 这个回调函数。
+
+注意，如果作为参数的 Promise 实例，自己定义了 catch 方法，那么它一旦被 rejected，并不会触发 Promise.all()的 catch 方法。
